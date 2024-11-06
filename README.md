@@ -1,109 +1,131 @@
-# Logger Software Architecture
+# Test Cases for Custom Logger
 
-## Overview
+## 1. Log Aggregator
 
-The logger software is designed to efficiently aggregate and send log data to a Loki instance, allowing for high-performance logging and streamlined data transfer. This logger provides a structured way to handle logs from various sources, enhance metadata labeling, and ensure optimal compatibility with Loki’s ingestion endpoints.
+### 1.1 File Log Collection
+- **Test Case**: Verify that the logger collects logs from specified file sources.
+- **Steps**:
+  1. Configure the logger to monitor a file (e.g., `/var/log/test.log`).
+  2. Append new log entries to the file.
+- **Expected Result**: Logger detects and processes new entries from the file.
+  
+### 1.2 Stdout Log Collection
+- **Test Case**: Verify that the logger collects logs from stdout.
+- **Steps**:
+  1. Configure the logger to capture stdout output.
+  2. Generate log messages through stdout.
+- **Expected Result**: Logger captures and processes stdout log entries correctly.
 
-## Objectives
+### 1.3 Network Log Collection
+- **Test Case**: Verify that the logger collects logs sent over the network.
+- **Steps**:
+  1. Configure the logger to listen on a network port (e.g., `9000`).
+  2. Send log entries to the configured port.
+- **Expected Result**: Logger captures and processes incoming log entries over the network.
 
-1. **Efficient Log Aggregation**: Collect logs from multiple sources and formats, including files, stdout, and network sources, for centralized processing.
-2. **Scalable Ingestion**: Provide mechanisms to handle high-volume log ingestion with minimal latency.
-3. **Flexible Labeling and Filtering**: Allow customizable labeling of logs to improve Loki query performance and data organization.
-4. **Optimized Data Transfer**: Implement compression and batching strategies to minimize network usage and maximize throughput.
-5. **Configurable and Extensible**: Offer a flexible configuration to adapt to various environments, ensuring compatibility across different deployments.
+## 2. Log Processor
 
-## Components
+### 2.1 Labeling of Log Entries
+- **Test Case**: Verify that logs are labeled correctly based on configuration.
+- **Steps**:
+  1. Set up labels (e.g., `app: "test-app"`, `env: "test"`) in the configuration.
+  2. Send a log entry through any source.
+- **Expected Result**: Log entries include the configured labels.
 
-### 1. **Log Aggregator**
-   - Collects logs from specified sources and processes them for labeling and metadata attachment.
-   - Supports multiple input types (e.g., files, stdout, network logs).
-   - Filters and processes logs based on severity, source, or other user-defined parameters.
+### 2.2 Log Deduplication
+- **Test Case**: Verify that duplicate log entries are not sent to Loki.
+- **Steps**:
+  1. Send identical log entries consecutively.
+- **Expected Result**: The logger sends only one instance of each unique log to Loki.
 
-### 2. **Log Processor**
-   - Parses raw log entries and attaches metadata such as `app`, `env`, `hostname`, and custom labels as specified.
-   - Formats log entries in a Loki-compatible format (JSON or Protobuf).
-   - Handles log deduplication to avoid redundant entries, particularly useful for highly repetitive log sources.
+### 2.3 JSON and Protobuf Formatting
+- **Test Case**: Verify that logs are formatted in JSON or Protobuf as per configuration.
+- **Steps**:
+  1. Configure log output format as JSON or Protobuf.
+  2. Send a log entry and inspect the formatted result.
+- **Expected Result**: Log entry format matches the selected configuration.
 
-### 3. **Batcher and Compressor**
-   - Batches logs based on time or size thresholds, grouping entries to optimize transport to Loki.
-   - Compresses batches using a lightweight, fast compression algorithm like **Snappy** to balance performance and size.
-   - Prepares logs for efficient, secure transfer, with optional encryption if required.
+## 3. Batcher and Compressor
 
-### 4. **HTTP Transport**
-   - Handles HTTP/HTTPS connections to Loki’s ingestion endpoint.
-   - Manages retry logic for transient errors and implements rate limiting to avoid overloading Loki.
-   - Logs successful and failed requests for monitoring and debugging purposes.
+### 3.1 Log Batching by Size
+- **Test Case**: Verify that logs are batched based on the configured size.
+- **Steps**:
+  1. Set `batch_size` to a specified number of logs.
+  2. Send multiple logs until the batch threshold is met.
+- **Expected Result**: Logs are sent in a single batch once the batch size is reached.
 
-### 5. **Configuration Manager**
-   - Reads and manages configuration files or environment variables to control settings like:
-     - Log sources and paths
-     - Label definitions
-     - Batch and compression settings
-     - Loki server connection details
-   - Allows dynamic reconfiguration for flexibility in various environments.
+### 3.2 Log Batching by Time Interval
+- **Test Case**: Verify that logs are batched based on the configured time interval.
+- **Steps**:
+  1. Set `batch_interval` to a specified duration.
+  2. Send logs continuously and check transmission timing.
+- **Expected Result**: Logs are batched and sent after the time interval is reached.
 
-## Workflow
+### 3.3 Compression
+- **Test Case**: Verify that log batches are compressed using the selected compression method.
+- **Steps**:
+  1. Configure `compression` as Snappy or GZIP.
+  2. Send logs and inspect the compressed batch data.
+- **Expected Result**: Log batches are compressed with the selected method.
 
-1. **Log Collection**: The Log Aggregator gathers logs from specified sources. Based on configuration, logs are either continuously read (e.g., tailing files) or received as discrete events (e.g., API requests).
-   
-2. **Processing and Labeling**:
-   - The Log Processor formats each log entry to a Loki-compatible JSON or Protobuf structure.
-   - Metadata such as `app`, `host`, and custom labels are attached to logs to facilitate efficient querying and filtering within Loki.
-   - Deduplication checks are performed, and only unique or significant log entries proceed.
+## 4. HTTP Transport
 
-3. **Batching and Compression**:
-   - Processed logs are batched based on defined thresholds (e.g., number of entries or time intervals).
-   - Batches are compressed using Snappy or a similarly fast algorithm to reduce payload size, optimizing network usage.
+### 4.1 Log Transmission to Loki
+- **Test Case**: Verify that the logger successfully sends log batches to the Loki endpoint.
+- **Steps**:
+  1. Configure Loki endpoint and send logs.
+  2. Check Loki for received logs.
+- **Expected Result**: Logs appear in Loki, matching the sent data.
 
-4. **Transmission to Loki**:
-   - The HTTP Transport module sends batched logs to Loki’s `/loki/api/v1/push` endpoint.
-   - Retries are managed for any failed requests, with exponential backoff to avoid overwhelming Loki.
-   - Successful transmissions are logged, and any failed ones are recorded for review and potential retransmission.
+### 4.2 Retry on Failed Transmission
+- **Test Case**: Verify that the logger retries sending logs if the transmission fails.
+- **Steps**:
+  1. Configure the Loki endpoint incorrectly to simulate failure.
+  2. Send a log entry.
+- **Expected Result**: Logger retries sending logs based on the retry policy.
 
-## Software and Dependencies
+### 4.3 Exponential Backoff
+- **Test Case**: Verify that retries use exponential backoff on repeated transmission failures.
+- **Steps**:
+  1. Set a short retry interval and misconfigure the Loki endpoint.
+  2. Observe retry intervals between failed attempts.
+- **Expected Result**: Retry intervals increase exponentially with each failure.
 
-1. **Programming Language**: Select a language with strong networking and JSON handling capabilities (e.g., Python, Go, or Node.js).
-2. **HTTP/HTTPS Library**: Required for establishing and managing connections to the Loki endpoint.
-3. **Compression Library (e.g., Snappy)**: A lightweight, high-performance compression library is essential for log batch compression.
-4. **JSON/Protobuf Encoder**: Formats logs in a Loki-compatible structure for efficient transport and querying.
+## 5. Configuration Manager
 
-## Technical Details
+### 5.1 Dynamic Configuration Reload
+- **Test Case**: Verify that the logger reloads configuration without a restart.
+- **Steps**:
+  1. Change configuration settings (e.g., labels or endpoint).
+  2. Send logs and verify that the changes take effect.
+- **Expected Result**: Logger reflects updated configuration without needing a restart.
 
-- **File Formats**:
-  - **JSON**: For simplicity and human readability.
-  - **Protobuf**: For environments requiring compact, efficient serialization (especially useful in high-load scenarios).
+### 5.2 Invalid Configuration Handling
+- **Test Case**: Verify that the logger handles invalid configuration gracefully.
+- **Steps**:
+  1. Introduce an error in the configuration (e.g., unsupported label format).
+  2. Start the logger.
+- **Expected Result**: Logger logs an error and continues with default or previous valid settings.
 
-- **Compression**:
-  - **Snappy**: Chosen for its speed and lightweight nature, providing a good balance of compression ratio and minimal impact on CPU.
-  - **Optional GZIP**: If more compression is required, especially for very large batches, GZIP may be considered.
+## 6. Performance and Load Testing
 
-## Configuration Example
+### 6.1 High-Volume Log Ingestion
+- **Test Case**: Test the logger’s ability to handle high log volume without errors or significant latency.
+- **Steps**:
+  1. Simulate a high rate of log entries.
+  2. Monitor performance metrics and log processing time.
+- **Expected Result**: Logger processes logs within acceptable time limits and avoids memory or CPU spikes.
 
-```yaml
-loki:
-  endpoint: "http://loki-server:3100/loki/api/v1/push"
-  batch_size: 1000        # Number of logs per batch
-  batch_interval: 5s      # Time interval before sending a batch
-  labels:
-    - app: "custom-logger"
-    - env: "production"
-    - hostname: "server-1"
-  compression: "snappy"   # Snappy or GZIP
-  retry:
-    max_retries: 5
-    backoff: 2s
-log_sources:
-  - type: "file"
-    path: "/var/log/app.log"
-  - type: "stdout"
-  - type: "network"
-    host: "0.0.0.0"
-    port: 9000
-```
+### 6.2 Network Latency and Resilience
+- **Test Case**: Verify the logger’s performance under varying network conditions.
+- **Steps**:
+  1. Simulate network latency or occasional connection drops.
+  2. Observe log transmission and retry behavior.
+- **Expected Result**: Logger continues to transmit logs as network conditions stabilize.
 
-## Best Practices
-
-1. **Use Meaningful Labels**: Define labels that provide contextual metadata, such as `service`, `hostname`, `env`, to enhance query accuracy.
-2. **Optimize Batch Size**: Set a batch size and interval based on log volume to avoid delays or excessive network usage.
-3. **Implement Reliable Error Handling**: Ensure that HTTP Transport has retry and backoff mechanisms, particularly in high-volume deployments.
-4. **Monitor Performance**: Regularly monitor log processing times, error rates, and batch sizes to optimize performance and resource usage.
+### 6.3 Memory and Resource Usage
+- **Test Case**: Verify that the logger maintains stable memory and CPU usage under normal and high loads.
+- **Steps**:
+  1. Run logger with continuous log generation.
+  2. Monitor memory and CPU usage.
+- **Expected Result**: Resource usage remains stable without significant spikes or leaks.
