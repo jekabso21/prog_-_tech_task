@@ -44,6 +44,8 @@ The logger software is designed to efficiently aggregate and send log data to a 
 
 ## Workflow
 
+![Logger Workflow](./images/loki.excalidraw.png)
+
 1. **Log Collection**: The Log Aggregator gathers logs from specified sources. Based on configuration, logs are either continuously read (e.g., tailing files) or received as discrete events (e.g., API requests).
    
 2. **Processing and Labeling**:
