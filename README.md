@@ -14,27 +14,27 @@ The logger software is designed to efficiently aggregate and send log data to a 
 
 ## Components
 
-### 1. **Log Aggregator**
+### 1. **[Log Aggregator](./component_desc/Log_Aggregator.md)**  
    - Collects logs from specified sources and processes them for labeling and metadata attachment.
    - Supports multiple input types (e.g., files, stdout, network logs).
    - Filters and processes logs based on severity, source, or other user-defined parameters.
 
-### 2. **Log Processor**
+### 2. **[Log Processor](./component_desc/Log_Processor.md)**  
    - Parses raw log entries and attaches metadata such as `app`, `env`, `hostname`, and custom labels as specified.
    - Formats log entries in a Loki-compatible format (JSON or Protobuf).
    - Handles log deduplication to avoid redundant entries, particularly useful for highly repetitive log sources.
 
-### 3. **Batcher and Compressor**
+### 3. **[Batcher and Compressor](./component_desc/Batcher_and_Compressor.md)** 
    - Batches logs based on time or size thresholds, grouping entries to optimize transport to Loki.
    - Compresses batches using a lightweight, fast compression algorithm like **Snappy** to balance performance and size.
    - Prepares logs for efficient, secure transfer, with optional encryption if required.
 
-### 4. **HTTP Transport**
+### 4. **[HTTP Transport](./component_desc/HTTP_Transport.md)** 
    - Handles HTTP/HTTPS connections to Loki’s ingestion endpoint.
    - Manages retry logic for transient errors and implements rate limiting to avoid overloading Loki.
    - Logs successful and failed requests for monitoring and debugging purposes.
 
-### 5. **Configuration Manager**
+### 5. **[Configuration Manager](./component_desc/Configuration_Manager.md)** 
    - Reads and manages configuration files or environment variables to control settings like:
      - Log sources and paths
      - Label definitions
